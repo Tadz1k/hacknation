@@ -1,0 +1,6 @@
+# gitignore
+# backup klucza do scam_links.enc – NIE PUBLIKOWAĆ!!!
+# (Do usunięcia po deployu)
+
+AES_KEY=Sup3rTajneHaslo!2026
+CIPHER=aes-128-ecb

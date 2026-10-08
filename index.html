@@ -61,7 +61,10 @@
     .brand .dot {
       width: 14px; height: 14px; border-radius: 50%;
       background: radial-gradient(circle at 30% 30%, var(--gold), var(--accent));
+      display: block; cursor: default;
+      transition: transform .4s;
     }
+    .brand .dot:hover { transform: rotate(180deg); }
     .hero-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -310,7 +313,7 @@
 
   <header class="hero">
     <div class="wrap">
-      <div class="brand"><span class="dot"></span>FakeCollector PRO™</div>
+      <div class="brand"><a class="dot" href="lusterko/" aria-label="lusterko"></a>FakeCollector PRO™</div>
 
       <div class="hero-grid">
         <!-- placeholder na video (1/2 szerokości) -->
@@ -355,7 +358,6 @@
     </div>
   </header>
 
-  <!-- preload animacji do banera (banner wyłączony) -->
   <img src="media/loop.gif" alt="" hidden width="1" height="1" loading="lazy">
 
   <section id="o-produkcie">
@@ -499,7 +501,8 @@
         enc_kdf: 'pbkdf2-sha256',
         enc_iter: '10000',
         enc_format: 'openssl-salted-base64',
-        enc_hint: 'openssl enc -d -aes-256-cbc -pbkdf2 -a -in scam_links.enc -pass pass:<KLUCZ_Z_FILMU>'
+        enc_hint: 'openssl enc -d -aes-256-cbc -pbkdf2 -a -in scam_links.enc -pass pass:<KLUCZ_Z_FILMU>',
+        czekoladka: 'bWVkaWEvX2hhc2xvLnBuZw'
       };
       for (var name in cookies) {
         document.cookie = name + '=' + encodeURIComponent(cookies[name]) +

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lusterko – FakeCollector PRO™</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    :root {
+      --bg: #1b1b1f;
+      --ink: #f4f1e8;
+      --muted: #8a8a96;
+      --accent: #ff3b5c;
+      --gold: #ffc83d;
+      --mirror: min(200px, 34vw);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(ellipse at center, #2a2a33 0%, var(--bg) 70%);
+      color: var(--ink);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px 16px 64px;
+      overflow-x: hidden;
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(22px, 3vw, 30px); }
+    .hint { margin: 0 0 28px; color: var(--muted); font-size: 15px; text-align: center; }
+
+    .stage {
+      position: relative;
+      width: min(1000px, 100%);
+      touch-action: none;
+      user-select: none;
+    }
+    .stage > img {
+      display: block; width: 100%; height: auto;
+      border-radius: 14px;
+      box-shadow: 0 30px 60px -25px rgba(0,0,0,.8);
+      -webkit-user-drag: none;
+    }
+
+    /* --- lusterko --- */
+    .mirror {
+      position: absolute; left: 0; top: 0;
+      width: var(--mirror); height: var(--mirror);
+      cursor: grab;
+      touch-action: none;
+      z-index: 2;
+    }
+    .mirror.dragging { cursor: grabbing; }
+    .mirror::after { /* rączka */
+      content: "";
+      position: absolute;
+      left: 50%; top: 100%;
+      width: calc(var(--mirror) * .16); height: calc(var(--mirror) * .62);
+      margin-left: calc(var(--mirror) * -.08);
+      border-radius: 0 0 999px 999px;
+      background: linear-gradient(90deg, #b8860b, var(--gold) 45%, #8a6408);
+      transform-origin: 50% calc(var(--mirror) * -.5);
+      transform: rotate(-35deg);
+      box-shadow: 0 10px 20px -8px rgba(0,0,0,.7);
+      z-index: -1;
+    }
+    .glass {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #fff;
+      border: calc(var(--mirror) * .06) solid var(--gold);
+      box-shadow:
+        0 0 0 2px #8a6408,
+        inset 0 0 0 2px rgba(0,0,0,.25),
+        0 18px 40px -12px rgba(0,0,0,.8);
+    }
+    .glass .rot {
+      position: absolute; inset: 0;
+      transform: scaleY(-1); /* odbicie w pionie: góra ↔ dół, lewo/prawo bez zmian */
+    }
+    .glass .rot img {
+      position: absolute; left: 0; top: 0;
+      max-width: none;
+      -webkit-user-drag: none;
+    }
+    .glass::after { /* odblask szkła */
+      content: "";
+      position: absolute; inset: 0; border-radius: 50%;
+      background: linear-gradient(135deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0) 70%, rgba(255,255,255,.18) 100%);
+      pointer-events: none;
+    }
+    .mirror.idle { animation: wiggle 2.4s ease-in-out infinite; }
+    @keyframes wiggle {
+      0%, 80%, 100% { rotate: 0deg; }
+      85% { rotate: -8deg; }
+      90% { rotate: 7deg; }
+      95% { rotate: -4deg; }
+    }
+    @media (prefers-reduced-motion: reduce) { .mirror.idle { animation: none; } }
+
+    .back { margin-top: 48px; color: var(--muted); font-size: 14px; }
+    .back a { color: var(--muted); }
+
+    /* link do góry nogami, prawie niewidoczny */
+    .flip {
+      position: fixed; right: 14px; bottom: 10px;
+      transform: rotate(180deg);
+      font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+      color: #3a3a44; text-decoration: none;
+      transition: color .2s;
+    }
+    .flip:hover { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <!-- Nie wszystko trzeba czytać wprost. Czasem wystarczy spojrzeć z drugiej strony. -->
+  <h1>🪞 Lusterko</h1>
+  <p class="hint">Przeciągnij lusterko po obrazku. Odbicie pokazuje świat do góry nogami.</p>
+
+  <div class="stage" id="stage">
+    <img id="src" src="../media/czekoladka.png" alt="Zagadkowe symbole" draggable="false">
+    <div class="mirror idle" id="mirror" role="slider" aria-label="Lusterko – przeciągnij" tabindex="0">
+      <div class="glass"><div class="rot"><img id="refl" src="../media/czekoladka.png" alt="" draggable="false"></div></div>
+    </div>
+  </div>
+
+  <p class="back"><a href="../">← wróć do okazji</a></p>
+
+  <a class="flip" href="../files/___BACKUP.zip" download title="backup">⬇ ___BACKUP.zip</a>
+
+  <script>
+    (function () {
+      var stage = document.getElementById('stage');
+      var src = document.getElementById('src');
+      var mirror = document.getElementById('mirror');
+      var refl = document.getElementById('refl');
+      // pozycja środka lusterka jako ułamek rozmiaru obrazka (przeżywa zmianę rozmiaru okna)
+      var fx = 0.88, fy = 0.72;
+
+      function render() {
+        var w = src.clientWidth, h = src.clientHeight;
+        var d = mirror.offsetWidth;
+        var inner = refl.parentNode.clientWidth; // szkło bez ramki
+        var cx = fx * w, cy = fy * h;
+        mirror.style.transform = 'translate(' + (cx - d / 2) + 'px,' + (cy - d / 2) + 'px)';
+        // obrazek w lusterku = ten sam fragment co pod lusterkiem, odbity w pionie wokół środka
+        refl.style.width = w + 'px';
+        refl.style.height = h + 'px';
+        refl.style.transform = 'translate(' + (inner / 2 - cx) + 'px,' + (inner / 2 - cy) + 'px)';
+      }
+
+      function moveTo(clientX, clientY) {
+        var r = src.getBoundingClientRect();
+        fx = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+        fy = Math.min(1, Math.max(0, (clientY - r.top) / r.height));
+        render();
+      }
+
+      var grabDX = 0, grabDY = 0;
+      mirror.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        var r = src.getBoundingClientRect();
+        grabDX = e.clientX - (r.left + fx * r.width);
+        grabDY = e.clientY - (r.top + fy * r.height);
+        mirror.setPointerCapture(e.pointerId);
+        mirror.classList.add('dragging');
+        mirror.classList.remove('idle');
+      });
+      mirror.addEventListener('pointermove', function (e) {
+        if (!mirror.hasPointerCapture(e.pointerId)) return;
+        moveTo(e.clientX - grabDX, e.clientY - grabDY);
+      });
+      function release() { mirror.classList.remove('dragging'); }
+      mirror.addEventListener('pointerup', release);
+      mirror.addEventListener('pointercancel', release);
+
+      // sterowanie strzałkami
+      mirror.addEventListener('keydown', function (e) {
+        var step = e.shiftKey ? 0.05 : 0.01;
+        var k = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+        if (!k) return;
+        e.preventDefault();
+        mirror.classList.remove('idle');
+        fx = Math.min(1, Math.max(0, fx + k[0]));
+        fy = Math.min(1, Math.max(0, fy + k[1]));
+        render();
+      });
+
+      if (src.complete) render(); else src.addEventListener('load', render);
+      window.addEventListener('resize', render);
+    })();
+  </script>
+</body>
+</html>
